@@ -1,0 +1,50 @@
+name: ShortLink Traffic Bot
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: 'Enter your shortlink URL (e.g., https://shrinkme.io/abc123)'
+        required: true
+      thread_count:
+        description: 'Number of concurrent visits (e.g., 10)'
+        required: true
+        default: '5'
+
+jobs:
+  visit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+
+      - name: Install Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: pip install requests fake-useragent
+
+      - name: Download Script
+        run: |
+          echo "import threading" > bot.py
+          echo "import requests" >> bot.py
+          echo "import random" >> bot.py
+          echo "import time" >> bot.py
+          echo "from fake_useragent import UserAgent" >> bot.py
+          echo "" >> bot.py
+          echo "ua = UserAgent()" >> bot.py
+          echo "url = '${{ github.event.inputs.target_url }}'" >> bot.py
+          echo "proxies = ['http://199.102.104.70:80', 'http://52.73.147.181:80', 'http://99.244.130.89:3128']" >> bot.py
+          echo "" >> bot.py
+          echo "def visit():\n    try:\n        proxy = {'http': random.choice(proxies), 'https': random.choice(proxies)}\n        headers = {'User-Agent': ua.random}\n        r = requests.get(url, headers=headers, proxies=proxy, timeout=10)\n        print(f'[✔] Visited with status: {r.status_code}')\n    except Exception as e:\n        print(f'[✘] Failed: {e}')" >> bot.py
+          echo "" >> bot.py
+          echo "threads = []" >> bot.py
+          echo "for i in range(${{
+            github.event.inputs.thread_count }}):\n    t = threading.Thread(target=visit)\n    t.start()\n    threads.append(t)\n    time.sleep(1)" >> bot.py
+          echo "" >> bot.py
+          echo "for t in threads:\n    t.join()" >> bot.py
+
+      - name: Run Traffic Bot
+        run: python3 bot.py
